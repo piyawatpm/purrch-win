@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RootNamespace>Purrch</RootNamespace>
+    <AssemblyName>Purrch</AssemblyName>
+    <Version>0.1.0</Version>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Sprite sheets + manifest are shared verbatim with the macOS build and
+         embedded so the app ships as a single self-contained .exe. -->
+    <EmbeddedResource Include="Assets\Sprites\*.png" />
+    <EmbeddedResource Include="Assets\Sprites\sprites.json" />
+    <EmbeddedResource Include="Assets\tray.png" />
+  </ItemGroup>
+
+</Project>

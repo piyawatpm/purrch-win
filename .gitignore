@@ -1,4 +1,6 @@
-node_modules/
-dist/
-*.log
+bin/
+obj/
+publish/
+*.user
+.vs/
 .DS_Store
