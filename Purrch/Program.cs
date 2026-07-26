@@ -109,7 +109,7 @@ namespace Purrch
                 if (!dragging && Math.Abs(p.X - downPos.X) + Math.Abs(p.Y - downPos.Y) > 6)
                 {
                     dragging = true;
-                    brain.Grab();
+                    brain.Grab(p.X, p.Y);
                 }
                 if (dragging) brain.MoveTo(p.X, p.Y);
             };

@@ -27,7 +27,7 @@ namespace Purrch
         private readonly int FW, FH, ground;
         private readonly Random rng = new();
         private Rectangle screen;
-        private double frameT, stateT, hold = 2, idleAccum, velY;
+        private double frameT, stateT, hold = 2, velY, grabDX, grabDY;
 
         public Brain(int fw, int fh, int groundRow)
         {
@@ -39,7 +39,9 @@ namespace Purrch
 
         public void UpdateScreen()
         {
-            screen = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.Bounds : new Rectangle(0, 0, 1280, 720);
+            // WorkingArea, not Bounds, so the floor sits on the visible desktop
+            // rather than behind the taskbar.
+            screen = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.WorkingArea : new Rectangle(0, 0, 1280, 720);
         }
 
         public double FloorY => screen.Bottom;
@@ -71,10 +73,12 @@ namespace Purrch
         }
 
         // --- interaction ---
-        public void Grab() { Dragging = true; SetState(PetState.Drag); }
-        public void MoveTo(int sx, int sy) { X = sx; FeetY = sy; }
+        // Grab remembers where on the pet you took hold, so it doesn't snap to the
+        // cursor when picked up.
+        public void Grab(int cursorX, int cursorY) { Dragging = true; grabDX = X - cursorX; grabDY = FeetY - cursorY; SetState(PetState.Drag); }
+        public void MoveTo(int cursorX, int cursorY) { X = cursorX + grabDX; FeetY = cursorY + grabDY; }
         public void Release() { Dragging = false; velY = 0; SetState(PetState.Fall); }
-        public void Poke() { if (State == PetState.Sleep) SetState(PetState.Idle); SetState(PetState.Happy); stateT = 0; hold = 1.2; idleAccum = 0; }
+        public void Poke() { if (State == PetState.Sleep) SetState(PetState.Idle); SetState(PetState.Happy); stateT = 0; hold = 1.2; }
 
         private void SetState(PetState s)
         {
@@ -88,7 +92,7 @@ namespace Purrch
             {
                 velY += 1400 * dt;
                 FeetY += velY * dt;
-                if (FeetY >= FloorY) { FeetY = FloorY; velY = 0; SetState(PetState.Idle); idleAccum = 0; }
+                if (FeetY >= FloorY) { FeetY = FloorY; velY = 0; SetState(PetState.Idle); }
             }
             else if (!Dragging)
             {
@@ -101,12 +105,6 @@ namespace Purrch
                     double half = SpriteW / 2.0;
                     if (X < screen.Left + half) { X = screen.Left + half; Dir = 1; }
                     if (X > screen.Right - half) { X = screen.Right - half; Dir = -1; }
-                    idleAccum = 0;
-                }
-                else
-                {
-                    idleAccum += dt;
-                    if (idleAccum > 45 && State != PetState.Sleep) SetState(PetState.Sleep);
                 }
             }
 
@@ -120,9 +118,17 @@ namespace Purrch
         {
             if (State == PetState.Walk)
             {
-                var rest = new[] { PetState.Idle, PetState.Sit, PetState.Groom, PetState.Stretch, PetState.Yawn, PetState.Idle };
-                SetState(rest[rng.Next(rest.Length)]);
-                hold = 2 + rng.NextDouble() * 4;
+                if (rng.NextDouble() < 0.12)
+                {
+                    SetState(PetState.Sleep);           // occasionally curl up for a real nap
+                    hold = 6 + rng.NextDouble() * 8;
+                }
+                else
+                {
+                    var rest = new[] { PetState.Idle, PetState.Sit, PetState.Groom, PetState.Stretch, PetState.Yawn, PetState.Idle };
+                    SetState(rest[rng.Next(rest.Length)]);
+                    hold = 2 + rng.NextDouble() * 4;
+                }
             }
             else if (State == PetState.Happy)
             {

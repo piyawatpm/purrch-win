@@ -73,6 +73,14 @@ namespace Purrch
                 resByFile.TryGetValue($"cat__bell__{anim}.png", out res);
             if (res == null) resByFile.TryGetValue($"{species}__bell__idle.png", out res);
             if (res == null) resByFile.TryGetValue("cat__bell__idle.png", out res);
+            if (res == null)
+            {
+                // No sheet resolved (shouldn't happen with the shipped assets) — a
+                // transparent placeholder keeps the 30fps loop from throwing.
+                var blank = new[] { new Bitmap(FW, FH, PixelFormat.Format32bppArgb) };
+                cache[key] = blank;
+                return blank;
+            }
 
             int n = FrameCount(anim);
             var frames = new Bitmap[n];
