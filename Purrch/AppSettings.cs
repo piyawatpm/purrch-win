@@ -13,6 +13,7 @@ namespace Purrch
         public string Species { get; set; } = "cat";
         public int Scale { get; set; } = 3;
         public bool LaunchAtLogin { get; set; }
+        public bool Sound { get; set; } = true;
 
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string RunValue = "Purrch";

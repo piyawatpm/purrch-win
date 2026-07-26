@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace Purrch
 {
-    public enum PetState { Idle, Walk, Sit, Groom, Sleep, Stretch, Yawn, Happy, Drag, Fall }
+    public enum PetState { Idle, Walk, Sit, Groom, Sleep, Stretch, Yawn, Happy, Drag, Fall, Loaf, Scratch, Sniff, Wiggle }
 
     /// The behaviour loop: wanders the bottom of the screen, pauses to sit, groom,
     /// stretch, yawn, or nap after a long idle, and can be picked up and dropped.
@@ -61,6 +61,10 @@ namespace Purrch
             PetState.Happy => "happy",
             PetState.Drag => "drag",
             PetState.Fall => "fall",
+            PetState.Loaf => "loaf",
+            PetState.Scratch => "scratch",
+            PetState.Sniff => "sniff",
+            PetState.Wiggle => "wiggle",
             _ => "idle",
         };
 
@@ -125,7 +129,7 @@ namespace Purrch
                 }
                 else
                 {
-                    var rest = new[] { PetState.Idle, PetState.Sit, PetState.Groom, PetState.Stretch, PetState.Yawn, PetState.Idle };
+                    var rest = new[] { PetState.Idle, PetState.Sit, PetState.Groom, PetState.Stretch, PetState.Yawn, PetState.Loaf, PetState.Scratch, PetState.Sniff, PetState.Wiggle, PetState.Idle };
                     SetState(rest[rng.Next(rest.Length)]);
                     hold = 2 + rng.NextDouble() * 4;
                 }

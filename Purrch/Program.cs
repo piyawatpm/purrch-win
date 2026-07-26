@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -26,6 +28,7 @@ namespace Purrch
         private readonly System.Windows.Forms.Timer timer = new();
         private readonly NotifyIcon tray = new();
         private readonly AppSettings settings = AppSettings.Load();
+        private readonly Sounds sounds;
 
         private DateTime last = DateTime.UtcNow;
         private Bitmap backbuffer;
@@ -33,6 +36,9 @@ namespace Purrch
 
         private bool pressing, dragging;
         private Point downPos;
+
+        private ToolStripMenuItem updateItem;
+        private string updateUrl;
 
         public PetContext()
         {
@@ -43,6 +49,7 @@ namespace Purrch
             };
             brain.AnimMs = a => lib.Ms(a);
             brain.AnimFrames = a => lib.FrameCount(a);
+            sounds = new Sounds(lib) { Enabled = settings.Sound };
 
             settings.SyncStartup();
 
@@ -55,6 +62,8 @@ namespace Purrch
             timer.Start();
 
             SystemEvents.DisplaySettingsChanged += (s, e) => brain.UpdateScreen();
+
+            _ = CheckForUpdatesAsync();   // quietly look for a newer release at startup
         }
 
         private void Tick()
@@ -118,8 +127,15 @@ namespace Purrch
                 if (e.Button != MouseButtons.Left || !pressing) return;
                 pressing = false;
                 form.Capture = false;
-                if (dragging) brain.Release();
-                else brain.Poke();
+                if (dragging)
+                {
+                    brain.Release();
+                }
+                else
+                {
+                    brain.Poke();
+                    sounds.Play(brain.Species == "dog" ? "bark" : "meow");
+                }
                 dragging = false;
             };
         }
@@ -146,9 +162,15 @@ namespace Purrch
             }
             menu.Items.Add(sizes);
 
+            var sound = new ToolStripMenuItem("Sound", null, (s, e) => ToggleSound());
+            menu.Items.Add(sound);
+
             var launch = new ToolStripMenuItem("Launch at login", null, (s, e) => ToggleLaunch());
             menu.Items.Add(launch);
             menu.Items.Add(new ToolStripSeparator());
+
+            updateItem = new ToolStripMenuItem("Check for updates…", null, (s, e) => OnUpdateClicked());
+            menu.Items.Add(updateItem);
             menu.Items.Add(new ToolStripMenuItem("Quit Purrch", null, (s, e) => Quit()));
 
             menu.Opening += (s, e) =>
@@ -159,6 +181,7 @@ namespace Purrch
                     it.Checked = (it.Text == "Small" && brain.Scale == 2)
                               || (it.Text == "Medium" && brain.Scale == 3)
                               || (it.Text == "Large" && brain.Scale == 4);
+                sound.Checked = settings.Sound;
                 launch.Checked = settings.LaunchAtLogin;
             };
 
@@ -187,6 +210,49 @@ namespace Purrch
             settings.LaunchAtLogin = !settings.LaunchAtLogin;
             settings.SyncStartup();
             settings.Save();
+        }
+
+        private void ToggleSound()
+        {
+            settings.Sound = !settings.Sound;
+            sounds.Enabled = settings.Sound;
+            settings.Save();
+        }
+
+        // Checks GitHub Releases and, if there's a newer version, points the tray
+        // menu at the download. It never fetches or runs an exe itself.
+        private async Task CheckForUpdatesAsync(bool manual = false)
+        {
+            var info = await Updater.CheckAsync();
+            void ShowResult()
+            {
+                if (info.Available)
+                {
+                    updateUrl = info.PageUrl;
+                    if (updateItem != null) updateItem.Text = $"Get update {info.Version} →";
+                    tray.ShowBalloonTip(6000, "Purrch update available",
+                        $"{info.Version} is ready — open the tray menu to get it.", ToolTipIcon.Info);
+                }
+                else if (manual)
+                {
+                    tray.ShowBalloonTip(4000, "Purrch", "You're on the latest version.", ToolTipIcon.Info);
+                }
+            }
+            if (form.IsHandleCreated) form.BeginInvoke((Action)ShowResult);
+            else ShowResult();
+        }
+
+        private void OnUpdateClicked()
+        {
+            if (!string.IsNullOrEmpty(updateUrl))
+            {
+                try { Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true }); }
+                catch { /* ignore */ }
+            }
+            else
+            {
+                _ = CheckForUpdatesAsync(manual: true);
+            }
         }
 
         private void Quit()

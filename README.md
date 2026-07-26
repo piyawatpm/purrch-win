@@ -2,49 +2,73 @@
 
 A **native** Windows desktop pet — the same little cat and fluffy Pom from the
 macOS build, riding the same pixel-art sprite sheets. Written in C# / WinForms
-(Win32 under the hood), no web runtime.
+(Win32 under the hood), no web runtime, single self-contained `.exe`.
 
-## How it works
+## What it does
 
 - A **per-pixel-alpha layered window** (`UpdateLayeredWindow`) draws the pet with
   true transparency and always sits on top. Fully-transparent pixels let clicks
-  fall straight through to the desktop, so only the pet is interactive — no
-  hit-test hacks.
-- The pet **wanders** the bottom of the screen and pauses to sit, groom, stretch,
-  yawn, or curl up and **nap** after a long idle.
-- **Pick it up** with the mouse and drop it — it falls back to the floor with
-  gravity. A quick click just **pokes** it (a happy wiggle).
-- A **tray icon** switches cat/dog, sets the size, toggles launch-at-login, and
-  quits.
+  fall through to the desktop, so only the pet is interactive.
+- **Wanders** the bottom of the screen and pauses to sit, groom, stretch, yawn,
+  loaf, scratch, sniff, wiggle, or curl up and **nap**.
+- **Pick it up** and drop it — it falls back to the floor with gravity. A quick
+  click **pokes** it (a happy wiggle) and it **meows / barks**.
+- **Tray menu:** cat ⇄ dog, size, sound, launch-at-login, check for updates, quit.
 
-Sprite sheets are embedded, so the build is a single self-contained `Purrch.exe`
-that needs no .NET install.
+## Get it
+
+Download `Purrch.exe` from the [latest release](https://github.com/piyawatpm/purrch-win/releases/latest)
+and run it. It's self-contained — no .NET install needed. Quit from the tray icon.
+
+### Updates
+
+The app checks GitHub Releases at startup and shows a tray notification when a
+newer version exists; **Check for updates** in the tray menu opens the download.
+(It never silently downloads or replaces an executable — that keeps it clear of
+antivirus heuristics. One-click auto-update will come once the build is signed.)
+
+### "Windows protected your PC" / antivirus flags it
+
+The exe is currently **unsigned**, so Windows SmartScreen and some antivirus may
+warn on first run. It's safe — the source and build are public. To run it:
+
+1. On the SmartScreen dialog, click **More info → Run anyway**.
+2. Verify the download if you like: the release includes `Purrch.exe.sha256.txt`;
+   compare with `Get-FileHash Purrch.exe -Algorithm SHA256` in PowerShell.
+
+We already minimise false positives (no compressed self-extractor, ReadyToRun,
+real version/company metadata, a proper app manifest, no admin request). The only
+thing that *fully* clears SmartScreen is code signing — the CI is ready for it:
+add repo secrets `CODE_SIGN_PFX_BASE64` (base64 of your `.pfx`) and
+`CODE_SIGN_PASSWORD` and every build signs automatically. Certificate options:
+free [SignPath](https://signpath.io) for open-source, or
+[Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/)
+(~$10/mo for individuals).
 
 ## Build
 
-Native Windows binaries are built by CI (`.github/workflows/build-windows.yml`)
-on a Windows runner — the **build-windows** workflow publishes a self-contained
-single-file exe and uploads it as the `purrch-windows` artifact. Push a `v*` tag
-to build a release.
-
-Locally on Windows with the .NET 8 SDK:
+CI (`.github/workflows/build-windows.yml`) builds on a Windows runner and, on a
+`v*` tag, publishes a GitHub Release with the exe + checksum. Locally on Windows
+with the .NET 8 SDK:
 
 ```powershell
 dotnet publish Purrch/Purrch.csproj -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:PublishReadyToRun=true -o publish
 .\publish\Purrch.exe
 ```
 
-Quit from the tray icon.
+## Parity with the macOS app
+
+This is a growing port. **Done:** wander/rest/sleep, drag-drop with gravity,
+click reactions, meow/bark, cat/dog, size, launch-at-login, and in-app update
+checks. **Not yet ported from macOS:** the to-do list + feeding, toys, speech
+bubbles, the right-click control panel, collar/eye colour customisation, the
+photo-likeness feature, follow-cursor/window modes, and jump. The update
+mechanism above is what lets these ship incrementally.
 
 ## Assets
 
-`Purrch/Assets/Sprites/` is copied from the macOS app
-(`Sources/PetApp/Resources/Sprites`). Regenerate art there with
-`tools/spritegen.py`, then re-copy — never hand-edit the PNGs.
-
-## Roadmap
-
-First cut covers wandering, resting/sleeping, drag-and-drop, click reactions,
-cat/dog, size, and launch-at-login. Next: the to-do list + feeding, toys, the
-richer sleep/mood behaviours, and the photo-likeness feature from the macOS app.
+`Purrch/Assets/` (sprites + sounds) is copied from the macOS app
+(`Sources/PetApp/Resources`). Regenerate art there with `tools/spritegen.py`,
+then re-copy — never hand-edit the PNGs.

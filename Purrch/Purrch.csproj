@@ -8,15 +8,28 @@
     <Nullable>disable</Nullable>
     <RootNamespace>Purrch</RootNamespace>
     <AssemblyName>Purrch</AssemblyName>
-    <Version>0.1.0</Version>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Real identity + version metadata so the exe isn't an unnamed blob to
+         SmartScreen / antivirus heuristics. Bump Version for each release; the
+         in-app updater compares it against the latest GitHub tag. -->
+    <Version>0.2.0</Version>
+    <FileVersion>0.2.0.0</FileVersion>
+    <AssemblyVersion>0.2.0.0</AssemblyVersion>
+    <Company>Purrch</Company>
+    <Product>Purrch</Product>
+    <Authors>piyawatpm</Authors>
+    <Description>Purrch — a little desktop pet that keeps you company on your screen.</Description>
+    <Copyright>Copyright (c) piyawatpm</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Sprite sheets + manifest are shared verbatim with the macOS build and
-         embedded so the app ships as a single self-contained .exe. -->
+    <!-- Sprite sheets, sounds, and manifest are shared verbatim with the macOS
+         build and embedded so the app ships as a single self-contained .exe. -->
     <EmbeddedResource Include="Assets\Sprites\*.png" />
     <EmbeddedResource Include="Assets\Sprites\sprites.json" />
+    <EmbeddedResource Include="Assets\Sounds\*.wav" />
     <EmbeddedResource Include="Assets\tray.png" />
   </ItemGroup>
 
