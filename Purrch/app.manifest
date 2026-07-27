@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="0.2.0.0" name="Purrch.PetApp" type="win32" />
+  <assemblyIdentity version="0.2.1.0" name="Purrch.PetApp" type="win32" />
   <description>Purrch — a little desktop pet.</description>
 
   <!-- Runs as the normal user (no admin elevation) — a UAC prompt or admin

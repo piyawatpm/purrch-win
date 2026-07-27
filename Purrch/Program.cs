@@ -219,40 +219,64 @@ namespace Purrch
             settings.Save();
         }
 
-        // Checks GitHub Releases and, if there's a newer version, points the tray
-        // menu at the download. It never fetches or runs an exe itself.
+        // Checks GitHub Releases for a newer version. A manual scan (the tray
+        // button) reports the result in a clear dialog; the quiet startup check
+        // just updates the tray. It never downloads or runs an exe itself.
         private async Task CheckForUpdatesAsync(bool manual = false)
         {
+            if (manual && updateItem != null) updateItem.Text = "Checking…";
             var info = await Updater.CheckAsync();
+
             void ShowResult()
             {
                 if (info.Available)
                 {
                     updateUrl = info.PageUrl;
                     if (updateItem != null) updateItem.Text = $"Get update {info.Version} →";
-                    tray.ShowBalloonTip(6000, "Purrch update available",
-                        $"{info.Version} is ready — open the tray menu to get it.", ToolTipIcon.Info);
+                    if (manual)
+                    {
+                        var r = MessageBox.Show(
+                            $"Purrch {info.Version} is available.\nYou have v{CurrentVersion()}.\n\nOpen the download page?",
+                            "Purrch — update available", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                        if (r == DialogResult.Yes) OpenUrl(updateUrl);
+                    }
+                    else
+                    {
+                        tray.ShowBalloonTip(6000, "Purrch update available",
+                            $"{info.Version} is ready — open the tray menu to get it.", ToolTipIcon.Info);
+                    }
                 }
-                else if (manual)
+                else
                 {
-                    tray.ShowBalloonTip(4000, "Purrch", "You're on the latest version.", ToolTipIcon.Info);
+                    if (updateItem != null) updateItem.Text = "Check for updates…";
+                    if (manual)
+                        MessageBox.Show($"You're on the latest version (v{CurrentVersion()}).",
+                            "Purrch", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
+
             if (form.IsHandleCreated) form.BeginInvoke((Action)ShowResult);
             else ShowResult();
         }
 
+        // Tray "Check for updates" click: if startup already found one, go straight
+        // to the download; otherwise scan now and report the result.
         private void OnUpdateClicked()
         {
-            if (!string.IsNullOrEmpty(updateUrl))
-            {
-                try { Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true }); }
-                catch { /* ignore */ }
-            }
-            else
-            {
-                _ = CheckForUpdatesAsync(manual: true);
-            }
+            if (!string.IsNullOrEmpty(updateUrl)) OpenUrl(updateUrl);
+            else _ = CheckForUpdatesAsync(manual: true);
+        }
+
+        private static string CurrentVersion()
+        {
+            var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            return v == null ? "?" : $"{v.Major}.{v.Minor}.{v.Build}";
+        }
+
+        private static void OpenUrl(string url)
+        {
+            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+            catch { /* ignore */ }
         }
 
         private void Quit()
