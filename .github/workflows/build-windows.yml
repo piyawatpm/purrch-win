@@ -30,19 +30,32 @@ jobs:
           -p:PublishReadyToRun=true
           -o publish
 
-      # Real code signing is the only thing that fully clears SmartScreen. This runs
-      # automatically once you add CODE_SIGN_PFX_BASE64 + CODE_SIGN_PASSWORD repo
-      # secrets; until then it just skips.
-      - name: Code-sign (if a certificate is configured)
-        shell: pwsh
-        env:
-          PFX_B64: ${{ secrets.CODE_SIGN_PFX_BASE64 }}
-          PFX_PW: ${{ secrets.CODE_SIGN_PASSWORD }}
-        run: |
-          if ([string]::IsNullOrEmpty($env:PFX_B64)) { Write-Host "No signing certificate configured - skipping."; exit 0 }
-          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", [Convert]::FromBase64String($env:PFX_B64))
-          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1).FullName
-          & $signtool sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:PFX_PW /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "publish\Purrch.exe"
+      # --- Code signing (SignPath, free for open source) ---------------------
+      # Fully wired but dormant: it only runs once you set the repo variable
+      # SIGNPATH_ORG_ID and secret SIGNPATH_API_TOKEN (see SIGNING.md). Until then
+      # the build ships the same unsigned exe as before. SignPath pulls the
+      # uploaded artifact, signs it in the cloud, and writes the signed copy back
+      # into publish/, so everything downstream uses the signed exe automatically.
+      - id: unsigned
+        if: ${{ vars.SIGNPATH_ORG_ID != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: purrch-unsigned
+          path: publish/Purrch.exe
+
+      - name: Code-sign with SignPath
+        if: ${{ vars.SIGNPATH_ORG_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORG_ID }}
+          project-slug: purrch-win
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          github-token: ${{ github.token }}
+          wait-for-completion: true
+          output-artifact-directory: publish
+      # -----------------------------------------------------------------------
 
       - name: Checksum
         shell: pwsh

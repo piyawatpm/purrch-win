@@ -38,12 +38,9 @@ warn on first run. It's safe — the source and build are public. To run it:
 
 We already minimise false positives (no compressed self-extractor, ReadyToRun,
 real version/company metadata, a proper app manifest, no admin request). The only
-thing that *fully* clears SmartScreen is code signing — the CI is ready for it:
-add repo secrets `CODE_SIGN_PFX_BASE64` (base64 of your `.pfx`) and
-`CODE_SIGN_PASSWORD` and every build signs automatically. Certificate options:
-free [SignPath](https://signpath.io) for open-source, or
-[Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/)
-(~$10/mo for individuals).
+thing that *fully* clears SmartScreen is **code signing**, and the CI is already
+wired for it (SignPath — free for open source). See **[SIGNING.md](SIGNING.md)**
+for the ~15-minute setup; once your token is added, every build signs itself.
 
 ## Build
 
