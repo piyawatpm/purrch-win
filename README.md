@@ -57,14 +57,15 @@ dotnet publish Purrch/Purrch.csproj -c Release -r win-x64 --self-contained true 
 
 ## Parity with the macOS app
 
-Nearly at parity. **Done:** wander/rest/sleep, drag-drop with gravity, click
-reactions, meow/bark, cat/dog, size, launch-at-login, in-app update checks, the
-to-do list + feeding, speech bubbles + spontaneous chatter, jump, **toys
-(mouse/ball/feather — chase & pounce)**, a **right-click control panel**,
-**follow-cursor mode**, **collar styles**, and **eye/ear/collar/bell colour
-customisation**. **Not yet ported from macOS:** the photo-likeness feature
-(upload your pet → an AI sprite of it) and minor extras (perching on window
-title bars, time-of-day sleepiness).
+**Essentially at parity with the macOS app.** Done: wander/rest/sleep, drag-drop
+with gravity, click reactions, meow/bark, cat/dog, size, launch-at-login, in-app
+updates, the to-do list + feeding, speech bubbles + spontaneous chatter, jump,
+toys (mouse/ball/feather — chase & pounce), a right-click control panel,
+follow-cursor mode, collar styles, eye/ear/collar/bell colour customisation, and
+the **photo-likeness** feature — upload your pet and an image model (Gemini,
+bring-your-own key) redraws it as the companion, with your pet's colours pulled
+across the whole rig. Minor macOS flourishes not yet ported: perching on window
+title bars, time-of-day sleepiness, and the animation tester.
 
 ## Assets
 
