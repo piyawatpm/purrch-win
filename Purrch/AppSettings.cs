@@ -16,6 +16,10 @@ namespace Purrch
         public bool Sound { get; set; } = true;
         public string Style { get; set; } = "bell";   // collar: none|band|bell|bowtie|bandana
         public string Mode { get; set; } = "roam";     // roam | follow
+        public string EyeHex { get; set; } = "#DEC64E";
+        public string EarHex { get; set; } = "#3E2F31";
+        public string CollarHex { get; set; } = "#2E2840";
+        public string BellHex { get; set; } = "#CEB058";
 
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string RunValue = "Purrch";

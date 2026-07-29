@@ -85,6 +85,7 @@ namespace Purrch
             WireMouse();
             BuildTray();
             BuildControlMenu();
+            ApplyPalette();
 
             timer.Interval = 33;   // ~30 fps
             timer.Tick += (s, e) => Tick();
@@ -198,11 +199,19 @@ namespace Purrch
         private void OpenSettings()
         {
             if (settingsForm == null || settingsForm.IsDisposed)
-                settingsForm = new SettingsForm(settings, () => { brain.Species = settings.Species; brain.Mode = settings.Mode; });
+                settingsForm = new SettingsForm(settings, () => { brain.Species = settings.Species; brain.Mode = settings.Mode; ApplyPalette(); });
             settingsForm.Show();
             settingsForm.WindowState = FormWindowState.Normal;
             settingsForm.BringToFront();
             settingsForm.Activate();
+        }
+
+        private void ApplyPalette() =>
+            lib.SetPalette(Hex(settings.EyeHex), Hex(settings.EarHex), Hex(settings.CollarHex), Hex(settings.BellHex));
+
+        private static Color Hex(string s)
+        {
+            try { return ColorTranslator.FromHtml(s); } catch { return Color.Gray; }
         }
 
         // A speech bubble drawn above the pet's head while it has something to say.

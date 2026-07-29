@@ -29,6 +29,29 @@ namespace Purrch
         private readonly Assembly asm = Assembly.GetExecutingAssembly();
         private readonly Dictionary<string, string> resByFile = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Bitmap[]> cache = new();
+        private List<Recolor.Map> paletteMaps = new();
+
+        /// Remaps the eye / inner-ear / collar / bell key colours to user choices,
+        /// then clears the frame cache so the next draw reflects them.
+        public void SetPalette(Color eye, Color ear, Color collar, Color bell)
+        {
+            paletteMaps = new List<Recolor.Map>
+            {
+                Key(222, 198, 78, eye),
+                Key(156, 132, 44, Shade(eye, 0.70)),
+                Key(84, 52, 62, ear),
+                Key(46, 40, 64, collar),
+                Key(206, 176, 88, bell),
+                Key(180, 72, 72, collar),   // bandana cloth follows the collar colour
+            };
+            cache.Clear();
+        }
+
+        private static Recolor.Map Key(int r, int g, int b, Color to) =>
+            new Recolor.Map { fr = (byte)r, fg = (byte)g, fb = (byte)b, tr = to.R, tg = to.G, tb = to.B };
+
+        private static Color Shade(Color c, double f) =>
+            Color.FromArgb((int)(c.R * f), (int)(c.G * f), (int)(c.B * f));
 
         public SpriteLibrary()
         {
@@ -146,6 +169,7 @@ namespace Purrch
                         g.DrawImage(sheet, new Rectangle(0, 0, FW, FH),
                                     new Rectangle(i * FW, 0, FW, FH), GraphicsUnit.Pixel);
                     }
+                    Recolor.Apply(fr, paletteMaps);
                     if (facingLeft) fr.RotateFlip(RotateFlipType.RotateNoneFlipX);
                     frames[i] = fr;
                 }
