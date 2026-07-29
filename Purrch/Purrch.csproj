@@ -14,9 +14,9 @@
     <!-- Real identity + version metadata so the exe isn't an unnamed blob to
          SmartScreen / antivirus heuristics. Bump Version for each release; the
          in-app updater compares it against the latest GitHub tag. -->
-    <Version>0.2.1</Version>
-    <FileVersion>0.2.1.0</FileVersion>
-    <AssemblyVersion>0.2.1.0</AssemblyVersion>
+    <Version>0.3.0</Version>
+    <FileVersion>0.3.0.0</FileVersion>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
     <Company>Purrch</Company>
     <Product>Purrch</Product>
     <Authors>piyawatpm</Authors>

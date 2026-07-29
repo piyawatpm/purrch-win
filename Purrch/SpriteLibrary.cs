@@ -62,6 +62,31 @@ namespace Purrch
         public Stream ResourceStream(string file)
             => resByFile.TryGetValue(file, out var res) ? asm.GetManifestResourceStream(res) : null;
 
+        private readonly Dictionary<string, Bitmap[]> bowlCache = new();
+
+        /// A food bowl as [full, empty]; the sheet is two frames side by side.
+        public Bitmap[] Bowl(string kind)
+        {
+            if (bowlCache.TryGetValue(kind, out var cached)) return cached;
+            if (!resByFile.TryGetValue($"bowl_{kind}.png", out var res))
+                resByFile.TryGetValue("bowl_kibble.png", out res);
+            if (res == null) { var none = Array.Empty<Bitmap>(); bowlCache[kind] = none; return none; }
+
+            using var stream = asm.GetManifestResourceStream(res);
+            using var sheet = new Bitmap(stream);
+            int w = sheet.Width / 2, h = sheet.Height;
+            var frames = new Bitmap[2];
+            for (int i = 0; i < 2; i++)
+            {
+                var fr = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+                using (var g = Graphics.FromImage(fr))
+                    g.DrawImage(sheet, new Rectangle(0, 0, w, h), new Rectangle(i * w, 0, w, h), GraphicsUnit.Pixel);
+                frames[i] = fr;
+            }
+            bowlCache[kind] = frames;
+            return frames;
+        }
+
         /// The per-frame bitmaps for a species/animation, flipped when facing left.
         public Bitmap[] Frames(string species, string anim, bool facingLeft)
         {

@@ -40,6 +40,11 @@ namespace Purrch
         private ToolStripMenuItem updateItem;
         private string updateUrl;
 
+        private readonly PetForm bowlForm = new();
+        private bool bowlShown;
+        private bool playedCrunch;
+        private TasksForm tasksForm;
+
         public PetContext()
         {
             brain = new Brain(lib.FW, lib.FH, lib.Manifest.ground)
@@ -50,6 +55,15 @@ namespace Purrch
             brain.AnimMs = a => lib.Ms(a);
             brain.AnimFrames = a => lib.FrameCount(a);
             sounds = new Sounds(lib) { Enabled = settings.Sound };
+
+            TaskStore.Shared.PruneHistory();
+            TaskStore.Shared.TaskCompleted += () => brain.Feed();
+            TaskStore.Shared.AllDoneToday += () =>
+            {
+                brain.Celebrate();
+                sounds.Play(brain.Species == "dog" ? "bark" : "meow");
+                tray.ShowBalloonTip(4000, "Purrch", "All done for today ♥", ToolTipIcon.Info);
+            };
 
             settings.SyncStartup();
 
@@ -73,6 +87,10 @@ namespace Purrch
             last = now;
             brain.Update(dt);
             Render();
+            RenderBowl();
+
+            if (brain.State == PetState.Eat && !playedCrunch) { playedCrunch = true; sounds.Play("crunch"); }
+            else if (brain.State != PetState.Eat) playedCrunch = false;
         }
 
         private void Render()
@@ -98,6 +116,44 @@ namespace Purrch
                 g.DrawImage(frame, new Rectangle(0, 0, w, h), new Rectangle(0, 0, lib.FW, lib.FH), GraphicsUnit.Pixel);
             }
             form.SetBitmap(backbuffer, brain.WindowTopLeft());
+        }
+
+        // The food bowl is a second layered window shown only while there's a meal.
+        private void RenderBowl()
+        {
+            if (brain.BowlX == null)
+            {
+                if (bowlShown) { bowlForm.Visible = false; bowlShown = false; }
+                return;
+            }
+            var frames = lib.Bowl(brain.BowlKind);
+            if (frames.Length < 2) return;
+            var img = brain.BowlFull ? frames[0] : frames[1];
+            int scale = brain.Scale;
+            int w = img.Width * scale, h = img.Height * scale;
+            using var buf = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(buf))
+            {
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.Clear(Color.Transparent);
+                g.CompositingMode = CompositingMode.SourceOver;
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+                g.DrawImage(img, new Rectangle(0, 0, w, h), new Rectangle(0, 0, img.Width, img.Height), GraphicsUnit.Pixel);
+            }
+            int left = (int)Math.Round(brain.BowlX.Value - w / 2.0);
+            int top = (int)Math.Round(brain.BowlY - h);
+            if (!bowlShown) { bowlForm.Show(); bowlShown = true; }
+            bowlForm.SetBitmap(buf, new Point(left, top));
+        }
+
+        private void OpenTasks()
+        {
+            if (tasksForm == null || tasksForm.IsDisposed) tasksForm = new TasksForm();
+            tasksForm.Show();
+            tasksForm.WindowState = FormWindowState.Normal;
+            tasksForm.BringToFront();
+            tasksForm.Activate();
         }
 
         // A short press pokes the pet; dragging past a few pixels picks it up, and
@@ -161,6 +217,8 @@ namespace Purrch
                 sizes.DropDownItems.Add(new ToolStripMenuItem(pair.Item1, null, (s, e) => SetScale(val)));
             }
             menu.Items.Add(sizes);
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(new ToolStripMenuItem("Tasks…", null, (s, e) => OpenTasks()));
 
             var sound = new ToolStripMenuItem("Sound", null, (s, e) => ToggleSound());
             menu.Items.Add(sound);
