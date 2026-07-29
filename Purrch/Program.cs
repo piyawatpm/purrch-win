@@ -50,6 +50,11 @@ namespace Purrch
         private string bubbleCachedText;
         private Bitmap bubbleBmp;
 
+        private readonly PetForm toyForm = new();
+        private bool toyShown;
+        private int toyFrame;
+        private double toyFrameT;
+
         public PetContext()
         {
             brain = new Brain(lib.FW, lib.FH, lib.Manifest.ground)
@@ -95,6 +100,7 @@ namespace Purrch
             Render();
             RenderBowl();
             RenderBubble();
+            RenderToy(dt);
 
             if (brain.State == PetState.Eat && !playedCrunch) { playedCrunch = true; sounds.Play("crunch"); }
             else if (brain.State != PetState.Eat) playedCrunch = false;
@@ -233,6 +239,41 @@ namespace Purrch
             return p;
         }
 
+        // The toy is a small layered window the pet chases; the mouse animates as it runs.
+        private void RenderToy(double dt)
+        {
+            if (brain.ToyX == null)
+            {
+                if (toyShown) { toyForm.Visible = false; toyShown = false; }
+                return;
+            }
+            var frames = lib.Toy(brain.ToyKind);
+            if (frames.Length < 2) return;
+            toyFrameT += dt * 1000;
+            if (toyFrameT >= 110) { toyFrameT -= 110; toyFrame = (toyFrame + 1) % 2; }
+            var img = frames[brain.ToyRunning ? toyFrame : 0];
+
+            int scale = brain.Scale;
+            int w = img.Width * scale, h = img.Height * scale;
+            using var buf = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(buf))
+            {
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.Clear(Color.Transparent);
+                g.CompositingMode = CompositingMode.SourceOver;
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+                if (!brain.ToyFacingRight) { g.TranslateTransform(w, 0); g.ScaleTransform(-1, 1); }
+                g.DrawImage(img, new Rectangle(0, 0, w, h), new Rectangle(0, 0, img.Width, img.Height), GraphicsUnit.Pixel);
+            }
+            int left = (int)Math.Round(brain.ToyX.Value - w / 2.0);
+            int top = (int)Math.Round(brain.ToyY - h);
+            if (!toyShown) { toyForm.Show(); toyShown = true; }
+            toyForm.SetBitmap(buf, new Point(left, top));
+        }
+
+        private void DropToy(string kind) => brain.PlaceToy(kind);
+
         // A short press pokes the pet; dragging past a few pixels picks it up, and
         // releasing drops it to fall to the floor.
         private void WireMouse()
@@ -296,6 +337,12 @@ namespace Purrch
             menu.Items.Add(sizes);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(new ToolStripMenuItem("Tasks…", null, (s, e) => OpenTasks()));
+
+            var toys = new ToolStripMenuItem("Drop a toy");
+            toys.DropDownItems.Add(new ToolStripMenuItem("Mouse", null, (s, e) => DropToy("mouse")));
+            toys.DropDownItems.Add(new ToolStripMenuItem("Ball", null, (s, e) => DropToy("ball")));
+            toys.DropDownItems.Add(new ToolStripMenuItem("Feather", null, (s, e) => DropToy("feather")));
+            menu.Items.Add(toys);
 
             var sound = new ToolStripMenuItem("Sound", null, (s, e) => ToggleSound());
             menu.Items.Add(sound);

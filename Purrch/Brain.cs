@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace Purrch
 {
-    public enum PetState { Idle, Walk, Sit, Groom, Sleep, Stretch, Yawn, Happy, Drag, Fall, Loaf, Scratch, Sniff, Wiggle, Eat, Jump }
+    public enum PetState { Idle, Walk, Sit, Groom, Sleep, Stretch, Yawn, Happy, Drag, Fall, Loaf, Scratch, Sniff, Wiggle, Eat, Jump, Play, Pounce }
 
     /// The behaviour loop: wanders the bottom of the screen, pauses to sit, groom,
     /// stretch, yawn, or nap after a long idle, and can be picked up and dropped.
@@ -44,6 +44,15 @@ namespace Purrch
         private double bubbleTimer, chatterTimer;
         private static readonly string[] CatSays = { "meow", "mrrp?", "got a treat?", "pet me?", "purr…", "hi ♥", "mew" };
         private static readonly string[] DogSays = { "woof!", "borf", "treat?", "play?", "hi ♥", "wag", "arf" };
+
+        // Toys: a mouse/ball/feather the pet chases and pounces on.
+        public double? ToyX;
+        public double ToyY;
+        public string ToyKind = "mouse";
+        public bool ToyRunning;
+        public bool ToyFacingRight = true;
+        private bool toyCaught;
+        private double playTimer;
 
         public Brain(int fw, int fh, int groundRow)
         {
@@ -86,6 +95,8 @@ namespace Purrch
             PetState.Wiggle => "wiggle",
             PetState.Eat => "eat",
             PetState.Jump => "jump",
+            PetState.Play => "play",
+            PetState.Pounce => "pounce",
             _ => "idle",
         };
 
@@ -100,7 +111,7 @@ namespace Purrch
         // --- interaction ---
         // Grab remembers where on the pet you took hold, so it doesn't snap to the
         // cursor when picked up.
-        public void Grab(int cursorX, int cursorY) { Dragging = true; grabDX = X - cursorX; grabDY = FeetY - cursorY; walkTarget = null; BowlX = null; SetState(PetState.Drag); }
+        public void Grab(int cursorX, int cursorY) { Dragging = true; grabDX = X - cursorX; grabDY = FeetY - cursorY; walkTarget = null; BowlX = null; ToyX = null; SetState(PetState.Drag); }
         public void MoveTo(int cursorX, int cursorY) { X = cursorX + grabDX; FeetY = cursorY + grabDY; }
         public void Release() { Dragging = false; velY = 0; SetState(PetState.Fall); }
         public void Poke() { if (State == PetState.Sleep) SetState(PetState.Idle); SetState(PetState.Happy); stateT = 0; hold = 1.2; }
@@ -142,6 +153,23 @@ namespace Purrch
             SetState(PetState.Jump);
         }
 
+        // Drops a toy on the floor a little away so there's a chase.
+        public void PlaceToy(string kind)
+        {
+            if (Dragging) return;
+            Wake();
+            BowlX = null; walkTarget = null;     // a toy cancels any meal
+            ToyKind = kind;
+            double margin = 40;
+            double tx = screen.Left + margin + rng.NextDouble() * Math.Max(1, screen.Width - 2 * margin);
+            if (Math.Abs(tx - X) < 120) tx = X + (tx >= X ? 160 : -160);
+            ToyX = Math.Min(Math.Max(tx, screen.Left + 10), screen.Right - 10);
+            ToyY = FloorY;
+            ToyRunning = false;
+            toyCaught = false;
+            ToyFacingRight = ToyX.Value >= X;
+        }
+
         private void SetState(PetState s)
         {
             if (State == s) return;
@@ -161,6 +189,36 @@ namespace Purrch
                 eatTimer -= dt;
                 if (eatTimer <= 1.2) BowlFull = false;      // the bowl empties as he eats
                 if (eatTimer <= 0) { BowlX = null; SetState(PetState.Idle); }
+            }
+            else if (ToyX != null && !Dragging)
+            {
+                if (!toyCaught)
+                {
+                    // a mouse scurries away when the pet gets close
+                    if (ToyKind == "mouse" && Math.Abs(ToyX.Value - X) < 70)
+                    {
+                        double away = (ToyX.Value - X) >= 0 ? 1 : -1;
+                        ToyX = Math.Min(Math.Max(ToyX.Value + away * 130 * dt, screen.Left + 10), screen.Right - 10);
+                        ToyRunning = true; ToyFacingRight = away > 0;
+                    }
+                    else ToyRunning = false;
+
+                    Dir = ToyX.Value >= X ? 1 : -1;
+                    if (State != PetState.Walk) SetState(PetState.Walk);
+                    double step = Speed * 1.25 * dt;
+                    if (Math.Abs(ToyX.Value - X) <= step + 6)
+                    {
+                        toyCaught = true; ToyRunning = false;
+                        SetState(PetState.Pounce); playTimer = 2.6;
+                    }
+                    else X += Dir * step;
+                }
+                else
+                {
+                    playTimer -= dt;
+                    if (State == PetState.Pounce && playTimer <= 1.6) SetState(PetState.Play);
+                    if (playTimer <= 0) { ToyX = null; toyCaught = false; SetState(PetState.Idle); }
+                }
             }
             else if (walkTarget != null && !Dragging)
             {

@@ -87,6 +87,31 @@ namespace Purrch
             return frames;
         }
 
+        private readonly Dictionary<string, Bitmap[]> toyCache = new();
+
+        /// A toy as two animation frames (mouse | ball | feather).
+        public Bitmap[] Toy(string kind)
+        {
+            if (toyCache.TryGetValue(kind, out var cached)) return cached;
+            string file = kind == "ball" ? "toy_ball.png" : kind == "feather" ? "toy_feather.png" : "mouse.png";
+            if (!resByFile.TryGetValue(file, out var res)) resByFile.TryGetValue("mouse.png", out res);
+            if (res == null) { var none = Array.Empty<Bitmap>(); toyCache[kind] = none; return none; }
+
+            using var stream = asm.GetManifestResourceStream(res);
+            using var sheet = new Bitmap(stream);
+            int w = sheet.Width / 2, h = sheet.Height;
+            var frames = new Bitmap[2];
+            for (int i = 0; i < 2; i++)
+            {
+                var fr = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+                using (var g = Graphics.FromImage(fr))
+                    g.DrawImage(sheet, new Rectangle(0, 0, w, h), new Rectangle(i * w, 0, w, h), GraphicsUnit.Pixel);
+                frames[i] = fr;
+            }
+            toyCache[kind] = frames;
+            return frames;
+        }
+
         /// The per-frame bitmaps for a species/animation, flipped when facing left.
         public Bitmap[] Frames(string species, string anim, bool facingLeft)
         {
