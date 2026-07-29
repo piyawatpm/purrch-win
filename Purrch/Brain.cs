@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace Purrch
 {
-    public enum PetState { Idle, Walk, Sit, Groom, Sleep, Stretch, Yawn, Happy, Drag, Fall, Loaf, Scratch, Sniff, Wiggle, Eat }
+    public enum PetState { Idle, Walk, Sit, Groom, Sleep, Stretch, Yawn, Happy, Drag, Fall, Loaf, Scratch, Sniff, Wiggle, Eat, Jump }
 
     /// The behaviour loop: wanders the bottom of the screen, pauses to sit, groom,
     /// stretch, yawn, or nap after a long idle, and can be picked up and dropped.
@@ -85,6 +85,7 @@ namespace Purrch
             PetState.Sniff => "sniff",
             PetState.Wiggle => "wiggle",
             PetState.Eat => "eat",
+            PetState.Jump => "jump",
             _ => "idle",
         };
 
@@ -134,6 +135,13 @@ namespace Purrch
             stateT = 0; hold = 2.5;
         }
 
+        public void Jump()
+        {
+            if (Dragging || State == PetState.Eat || FeetY < FloorY - 1) return;
+            velY = -520;                 // upward impulse; the fall physics bring it back
+            SetState(PetState.Jump);
+        }
+
         private void SetState(PetState s)
         {
             if (State == s) return;
@@ -142,7 +150,7 @@ namespace Purrch
 
         public void Update(double dt)
         {
-            if (State == PetState.Fall)
+            if (State == PetState.Fall || State == PetState.Jump)
             {
                 velY += 1400 * dt;
                 FeetY += velY * dt;
@@ -205,6 +213,8 @@ namespace Purrch
 
         private void Decide()
         {
+            if (rng.NextDouble() < 0.08 && FeetY >= FloorY - 1) { Jump(); return; }
+
             if (State == PetState.Walk)
             {
                 if (rng.NextDouble() < 0.12)
