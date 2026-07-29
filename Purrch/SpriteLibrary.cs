@@ -112,16 +112,17 @@ namespace Purrch
             return frames;
         }
 
-        /// The per-frame bitmaps for a species/animation, flipped when facing left.
-        public Bitmap[] Frames(string species, string anim, bool facingLeft)
+        /// The per-frame bitmaps for a species/collar-style/animation, flipped when
+        /// facing left.
+        public Bitmap[] Frames(string species, string style, string anim, bool facingLeft)
         {
-            string key = species + "|" + anim + "|" + (facingLeft ? "L" : "R");
+            string key = species + "|" + style + "|" + anim + "|" + (facingLeft ? "L" : "R");
             if (cache.TryGetValue(key, out var cached)) return cached;
 
-            string file = $"{species}__bell__{anim}.png";
+            string file = $"{species}__{style}__{anim}.png";
             if (!resByFile.TryGetValue(file, out var res))
-                resByFile.TryGetValue($"cat__bell__{anim}.png", out res);
-            if (res == null) resByFile.TryGetValue($"{species}__bell__idle.png", out res);
+                resByFile.TryGetValue($"{species}__bell__{anim}.png", out res);
+            if (res == null) resByFile.TryGetValue($"cat__bell__{anim}.png", out res);
             if (res == null) resByFile.TryGetValue("cat__bell__idle.png", out res);
             if (res == null)
             {

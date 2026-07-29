@@ -55,12 +55,15 @@ namespace Purrch
         private int toyFrame;
         private double toyFrameT;
 
+        private SettingsForm settingsForm;
+
         public PetContext()
         {
             brain = new Brain(lib.FW, lib.FH, lib.Manifest.ground)
             {
                 Species = settings.Species,
                 Scale = Math.Max(2, Math.Min(4, settings.Scale)),
+                Mode = settings.Mode,
             };
             brain.AnimMs = a => lib.Ms(a);
             brain.AnimFrames = a => lib.FrameCount(a);
@@ -81,6 +84,7 @@ namespace Purrch
             form.Show();
             WireMouse();
             BuildTray();
+            BuildControlMenu();
 
             timer.Interval = 33;   // ~30 fps
             timer.Tick += (s, e) => Tick();
@@ -96,6 +100,7 @@ namespace Purrch
             var now = DateTime.UtcNow;
             double dt = Math.Min(0.1, (now - last).TotalSeconds);
             last = now;
+            brain.CursorX = Control.MousePosition.X;
             brain.Update(dt);
             Render();
             RenderBowl();
@@ -116,7 +121,7 @@ namespace Purrch
                 bufScale = brain.Scale;
             }
 
-            var frames = lib.Frames(brain.Species, brain.CurrentAnim, brain.Dir < 0);
+            var frames = lib.Frames(brain.Species, settings.Style, brain.CurrentAnim, brain.Dir < 0);
             var frame = frames[Math.Min(brain.Frame, frames.Length - 1)];
 
             using (var g = Graphics.FromImage(backbuffer))
@@ -167,6 +172,37 @@ namespace Purrch
             tasksForm.WindowState = FormWindowState.Normal;
             tasksForm.BringToFront();
             tasksForm.Activate();
+        }
+
+        // Right-clicking the pet opens this control panel.
+        private void BuildControlMenu()
+        {
+            var m = new ContextMenuStrip();
+            m.Items.Add(new ToolStripMenuItem("Come here", null, (s, e) => brain.ComeHere(Control.MousePosition.X)));
+            m.Items.Add(new ToolStripMenuItem("Feed", null, (s, e) => brain.Feed()));
+            var play = new ToolStripMenuItem("Play");
+            play.DropDownItems.Add(new ToolStripMenuItem("Mouse", null, (s, e) => DropToy("mouse")));
+            play.DropDownItems.Add(new ToolStripMenuItem("Ball", null, (s, e) => DropToy("ball")));
+            play.DropDownItems.Add(new ToolStripMenuItem("Feather", null, (s, e) => DropToy("feather")));
+            m.Items.Add(play);
+            m.Items.Add(new ToolStripMenuItem("Sit", null, (s, e) => brain.SitNow()));
+            m.Items.Add(new ToolStripMenuItem("Sleep", null, (s, e) => brain.ForceSleep()));
+            m.Items.Add(new ToolStripSeparator());
+            m.Items.Add(new ToolStripMenuItem("Tasks…", null, (s, e) => OpenTasks()));
+            m.Items.Add(new ToolStripMenuItem("Settings…", null, (s, e) => OpenSettings()));
+            m.Items.Add(new ToolStripSeparator());
+            m.Items.Add(new ToolStripMenuItem("Quit Purrch", null, (s, e) => Quit()));
+            form.ContextMenuStrip = m;
+        }
+
+        private void OpenSettings()
+        {
+            if (settingsForm == null || settingsForm.IsDisposed)
+                settingsForm = new SettingsForm(settings, () => { brain.Species = settings.Species; brain.Mode = settings.Mode; });
+            settingsForm.Show();
+            settingsForm.WindowState = FormWindowState.Normal;
+            settingsForm.BringToFront();
+            settingsForm.Activate();
         }
 
         // A speech bubble drawn above the pet's head while it has something to say.
@@ -343,6 +379,7 @@ namespace Purrch
             toys.DropDownItems.Add(new ToolStripMenuItem("Ball", null, (s, e) => DropToy("ball")));
             toys.DropDownItems.Add(new ToolStripMenuItem("Feather", null, (s, e) => DropToy("feather")));
             menu.Items.Add(toys);
+            menu.Items.Add(new ToolStripMenuItem("Settings…", null, (s, e) => OpenSettings()));
 
             var sound = new ToolStripMenuItem("Sound", null, (s, e) => ToggleSound());
             menu.Items.Add(sound);

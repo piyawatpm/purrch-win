@@ -14,6 +14,8 @@ namespace Purrch
         public int Scale { get; set; } = 3;
         public bool LaunchAtLogin { get; set; }
         public bool Sound { get; set; } = true;
+        public string Style { get; set; } = "bell";   // collar: none|band|bell|bowtie|bandana
+        public string Mode { get; set; } = "roam";     // roam | follow
 
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string RunValue = "Purrch";

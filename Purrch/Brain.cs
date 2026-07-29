@@ -19,6 +19,8 @@ namespace Purrch
         public int Scale = 3;
         public bool Dragging;
         public double Speed = 44;           // px / second while walking
+        public string Mode = "roam";        // roam | follow (the cursor)
+        public double CursorX;              // fed by the controller each tick
 
         // Wired to the sprite library so timing follows the shared manifest.
         public Func<string, double> AnimMs = _ => 150;
@@ -153,6 +155,15 @@ namespace Purrch
             SetState(PetState.Jump);
         }
 
+        public void ComeHere(double x)
+        {
+            Wake(); BowlX = null; ToyX = null;
+            walkTarget = Math.Min(Math.Max(x, screen.Left + SpriteW / 2.0), screen.Right - SpriteW / 2.0);
+        }
+
+        public void SitNow() { Wake(); BowlX = null; ToyX = null; walkTarget = null; SetState(PetState.Sit); stateT = 0; hold = 9999; }
+        public void ForceSleep() { BowlX = null; ToyX = null; walkTarget = null; SetState(PetState.Sleep); stateT = 0; hold = 9999; }
+
         // Drops a toy on the floor a little away so there's a chase.
         public void PlaceToy(string kind)
         {
@@ -237,15 +248,30 @@ namespace Purrch
             }
             else if (!Dragging)
             {
-                stateT += dt;
-                if (stateT >= hold) { stateT = 0; Decide(); }
-
-                if (State == PetState.Walk)
+                if (Mode == "follow")
                 {
-                    X += Dir * Speed * dt;
                     double half = SpriteW / 2.0;
-                    if (X < screen.Left + half) { X = screen.Left + half; Dir = 1; }
-                    if (X > screen.Right - half) { X = screen.Right - half; Dir = -1; }
+                    double gap = CursorX - X;
+                    if (Math.Abs(gap) > 90)
+                    {
+                        Dir = gap >= 0 ? 1 : -1;
+                        if (State != PetState.Walk) SetState(PetState.Walk);
+                        X = Math.Min(Math.Max(X + Dir * Speed * dt, screen.Left + half), screen.Right - half);
+                    }
+                    else if (State == PetState.Walk) SetState(PetState.Idle);
+                }
+                else
+                {
+                    stateT += dt;
+                    if (stateT >= hold) { stateT = 0; Decide(); }
+
+                    if (State == PetState.Walk)
+                    {
+                        X += Dir * Speed * dt;
+                        double half = SpriteW / 2.0;
+                        if (X < screen.Left + half) { X = screen.Left + half; Dir = 1; }
+                        if (X > screen.Right - half) { X = screen.Right - half; Dir = -1; }
+                    }
                 }
             }
 
