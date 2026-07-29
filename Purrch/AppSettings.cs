@@ -20,6 +20,8 @@ namespace Purrch
         public string EarHex { get; set; } = "#3E2F31";
         public string CollarHex { get; set; } = "#2E2840";
         public string BellHex { get; set; } = "#CEB058";
+        public bool CustomPetEnabled { get; set; }
+        public string CustomCoat { get; set; } = "";
 
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string RunValue = "Purrch";

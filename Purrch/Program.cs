@@ -56,6 +56,7 @@ namespace Purrch
         private double toyFrameT;
 
         private SettingsForm settingsForm;
+        private PortraitForm portraitForm;
 
         public PetContext()
         {
@@ -86,6 +87,7 @@ namespace Purrch
             BuildTray();
             BuildControlMenu();
             ApplyPalette();
+            PortraitStore.Restore(settings, lib);   // re-apply a saved photo likeness
 
             timer.Interval = 33;   // ~30 fps
             timer.Tick += (s, e) => Tick();
@@ -190,6 +192,7 @@ namespace Purrch
             m.Items.Add(new ToolStripMenuItem("Sleep", null, (s, e) => brain.ForceSleep()));
             m.Items.Add(new ToolStripSeparator());
             m.Items.Add(new ToolStripMenuItem("Tasks…", null, (s, e) => OpenTasks()));
+            m.Items.Add(new ToolStripMenuItem("Make it look like my pet…", null, (s, e) => OpenPortrait()));
             m.Items.Add(new ToolStripMenuItem("Settings…", null, (s, e) => OpenSettings()));
             m.Items.Add(new ToolStripSeparator());
             m.Items.Add(new ToolStripMenuItem("Quit Purrch", null, (s, e) => Quit()));
@@ -204,6 +207,16 @@ namespace Purrch
             settingsForm.WindowState = FormWindowState.Normal;
             settingsForm.BringToFront();
             settingsForm.Activate();
+        }
+
+        private void OpenPortrait()
+        {
+            if (portraitForm == null || portraitForm.IsDisposed)
+                portraitForm = new PortraitForm(settings, lib, () => { brain.Species = settings.Species; });
+            portraitForm.Show();
+            portraitForm.WindowState = FormWindowState.Normal;
+            portraitForm.BringToFront();
+            portraitForm.Activate();
         }
 
         private void ApplyPalette() =>
@@ -388,6 +401,7 @@ namespace Purrch
             toys.DropDownItems.Add(new ToolStripMenuItem("Ball", null, (s, e) => DropToy("ball")));
             toys.DropDownItems.Add(new ToolStripMenuItem("Feather", null, (s, e) => DropToy("feather")));
             menu.Items.Add(toys);
+            menu.Items.Add(new ToolStripMenuItem("Make it look like my pet…", null, (s, e) => OpenPortrait()));
             menu.Items.Add(new ToolStripMenuItem("Settings…", null, (s, e) => OpenSettings()));
 
             var sound = new ToolStripMenuItem("Sound", null, (s, e) => ToggleSound());

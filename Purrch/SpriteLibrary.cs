@@ -53,6 +53,65 @@ namespace Purrch
         private static Color Shade(Color c, double f) =>
             Color.FromArgb((int)(c.R * f), (int)(c.G * f), (int)(c.B * f));
 
+        // Photo likeness: a custom idle sprite (the pet's own pixels) plus a coat
+        // remap so every other animation takes on the pet's colours.
+        private Bitmap customIdle;
+        private List<Recolor.Map> coatMaps = new();
+
+        public void SetCustomPet(Bitmap idle, CoatPalette coat, string species)
+        {
+            customIdle = idle;
+            coatMaps = coat == null ? new List<Recolor.Map>() : BuildCoatMaps(coat, species);
+            cache.Clear();
+        }
+
+        public void ClearCustomPet()
+        {
+            customIdle = null;
+            coatMaps = new List<Recolor.Map>();
+            cache.Clear();
+        }
+
+        private static List<Recolor.Map> BuildCoatMaps(CoatPalette coat, string species)
+        {
+            (int r, int g, int b)[] from = species == "dog"
+                ? new[] { (70, 52, 40), (196, 168, 128), (224, 200, 160), (242, 226, 196), (252, 244, 228) }
+                : new[] { (9, 9, 13), (25, 25, 31), (37, 37, 46), (52, 52, 64), (110, 114, 138) };
+            Color[] to = { coat.Outline, coat.Dark, coat.Mid, coat.Light, coat.Rim };
+            var maps = new List<Recolor.Map>();
+            for (int i = 0; i < 5; i++) maps.Add(Key(from[i].r, from[i].g, from[i].b, to[i]));
+            return maps;
+        }
+
+        /// The stock idle frame for a species — the pose reference sent to the model.
+        public Bitmap IdleTemplate(string species)
+        {
+            string file = $"{species}__bell__idle.png";
+            if (!resByFile.TryGetValue(file, out var res)) resByFile.TryGetValue("cat__bell__idle.png", out res);
+            if (res == null) return null;
+            using var s = asm.GetManifestResourceStream(res);
+            using var sheet = new Bitmap(s);
+            var fr = new Bitmap(FW, FH, PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(fr))
+                g.DrawImage(sheet, new Rectangle(0, 0, FW, FH), new Rectangle(0, 0, FW, FH), GraphicsUnit.Pixel);
+            return fr;
+        }
+
+        // Wraps the custom idle in a gentle vertical bob so it looks alive.
+        private static Bitmap[] BreathingFrames(Bitmap idle, bool facingLeft)
+        {
+            int[] offsets = { 0, 0, 0, 0, 1, 1, 1, 1 };
+            var frames = new Bitmap[offsets.Length];
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                var fr = new Bitmap(idle.Width, idle.Height, PixelFormat.Format32bppArgb);
+                using (var g = Graphics.FromImage(fr)) g.DrawImage(idle, 0, offsets[i]);
+                if (facingLeft) fr.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                frames[i] = fr;
+            }
+            return frames;
+        }
+
         public SpriteLibrary()
         {
             // Map each embedded resource to its bare filename. Resource names look
@@ -142,6 +201,15 @@ namespace Purrch
             string key = species + "|" + style + "|" + anim + "|" + (facingLeft ? "L" : "R");
             if (cache.TryGetValue(key, out var cached)) return cached;
 
+            // The photo likeness replaces the idle clip outright — it's the pet's
+            // own pixels, so it isn't recoloured — with a breathing bob added.
+            if (customIdle != null && anim == "idle")
+            {
+                var breathe = BreathingFrames(customIdle, facingLeft);
+                cache[key] = breathe;
+                return breathe;
+            }
+
             string file = $"{species}__{style}__{anim}.png";
             if (!resByFile.TryGetValue(file, out var res))
                 resByFile.TryGetValue($"{species}__bell__{anim}.png", out res);
@@ -170,6 +238,7 @@ namespace Purrch
                                     new Rectangle(i * FW, 0, FW, FH), GraphicsUnit.Pixel);
                     }
                     Recolor.Apply(fr, paletteMaps);
+                    Recolor.Apply(fr, coatMaps);
                     if (facingLeft) fr.RotateFlip(RotateFlipType.RotateNoneFlipX);
                     frames[i] = fr;
                 }

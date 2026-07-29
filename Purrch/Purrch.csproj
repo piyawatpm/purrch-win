@@ -14,15 +14,20 @@
     <!-- Real identity + version metadata so the exe isn't an unnamed blob to
          SmartScreen / antivirus heuristics. Bump Version for each release; the
          in-app updater compares it against the latest GitHub tag. -->
-    <Version>0.3.0</Version>
-    <FileVersion>0.3.0.0</FileVersion>
-    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <Version>0.5.0</Version>
+    <FileVersion>0.5.0.0</FileVersion>
+    <AssemblyVersion>0.5.0.0</AssemblyVersion>
     <Company>Purrch</Company>
     <Product>Purrch</Product>
     <Authors>piyawatpm</Authors>
     <Description>Purrch — a little desktop pet that keeps you company on your screen.</Description>
     <Copyright>Copyright (c) piyawatpm</Copyright>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- DPAPI, for encrypting the user's image-API key at rest. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- Sprite sheets, sounds, and manifest are shared verbatim with the macOS
