@@ -45,6 +45,11 @@ namespace Purrch
         private bool playedCrunch;
         private TasksForm tasksForm;
 
+        private readonly PetForm bubbleForm = new();
+        private bool bubbleShown;
+        private string bubbleCachedText;
+        private Bitmap bubbleBmp;
+
         public PetContext()
         {
             brain = new Brain(lib.FW, lib.FH, lib.Manifest.ground)
@@ -55,6 +60,7 @@ namespace Purrch
             brain.AnimMs = a => lib.Ms(a);
             brain.AnimFrames = a => lib.FrameCount(a);
             sounds = new Sounds(lib) { Enabled = settings.Sound };
+            brain.OnChatter = () => sounds.Play(brain.Species == "dog" ? "bark" : "meow");
 
             TaskStore.Shared.PruneHistory();
             TaskStore.Shared.TaskCompleted += () => brain.Feed();
@@ -88,6 +94,7 @@ namespace Purrch
             brain.Update(dt);
             Render();
             RenderBowl();
+            RenderBubble();
 
             if (brain.State == PetState.Eat && !playedCrunch) { playedCrunch = true; sounds.Play("crunch"); }
             else if (brain.State != PetState.Eat) playedCrunch = false;
@@ -154,6 +161,76 @@ namespace Purrch
             tasksForm.WindowState = FormWindowState.Normal;
             tasksForm.BringToFront();
             tasksForm.Activate();
+        }
+
+        // A speech bubble drawn above the pet's head while it has something to say.
+        private void RenderBubble()
+        {
+            if (string.IsNullOrEmpty(brain.BubbleText))
+            {
+                if (bubbleShown) { bubbleForm.Visible = false; bubbleShown = false; }
+                return;
+            }
+            if (brain.BubbleText != bubbleCachedText)
+            {
+                bubbleBmp?.Dispose();
+                bubbleBmp = BuildBubble(brain.BubbleText);
+                bubbleCachedText = brain.BubbleText;
+            }
+            int petTop = brain.WindowTopLeft().Y;
+            int left = (int)Math.Round(brain.X - bubbleBmp.Width / 2.0);
+            int top = petTop - bubbleBmp.Height - 2;
+            if (!bubbleShown) { bubbleForm.Show(); bubbleShown = true; }
+            bubbleForm.SetBitmap(bubbleBmp, new Point(left, top));
+        }
+
+        private static Bitmap BuildBubble(string text)
+        {
+            using var font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            SizeF sz;
+            using (var probe = new Bitmap(1, 1))
+            using (var g0 = Graphics.FromImage(probe))
+                sz = g0.MeasureString(text, font);
+
+            int padX = 12, padY = 7, tail = 6;
+            int w = (int)Math.Ceiling(sz.Width) + padX * 2;
+            int h = (int)Math.Ceiling(sz.Height) + padY * 2 + tail;
+            var bmp = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+                var body = new Rectangle(0, 0, w - 1, h - tail - 1);
+                using (var path = RoundedRect(body, 8))
+                using (var fill = new SolidBrush(Color.FromArgb(240, 255, 255, 255)))
+                using (var pen = new Pen(Color.FromArgb(200, 90, 90, 90)))
+                {
+                    g.FillPath(fill, path);
+                    g.DrawPath(pen, path);
+                    var tri = new[]
+                    {
+                        new Point(w / 2 - 6, h - tail - 1),
+                        new Point(w / 2 + 6, h - tail - 1),
+                        new Point(w / 2, h - 1),
+                    };
+                    g.FillPolygon(fill, tri);
+                }
+                using var ink = new SolidBrush(Color.FromArgb(40, 40, 45));
+                g.DrawString(text, font, ink, padX, padY);
+            }
+            return bmp;
+        }
+
+        private static GraphicsPath RoundedRect(Rectangle r, int radius)
+        {
+            int d = radius * 2;
+            var p = new GraphicsPath();
+            p.AddArc(r.X, r.Y, d, d, 180, 90);
+            p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            p.CloseFigure();
+            return p;
         }
 
         // A short press pokes the pet; dragging past a few pixels picks it up, and

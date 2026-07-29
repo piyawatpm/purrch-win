@@ -38,13 +38,23 @@ namespace Purrch
         private double eatTimer;
         private static readonly string[] BowlKinds = { "kibble", "fish", "treat", "milk" };
 
+        // Chatter: an occasional speech bubble above the pet.
+        public string BubbleText;
+        public Action OnChatter;
+        private double bubbleTimer, chatterTimer;
+        private static readonly string[] CatSays = { "meow", "mrrp?", "got a treat?", "pet me?", "purr…", "hi ♥", "mew" };
+        private static readonly string[] DogSays = { "woof!", "borf", "treat?", "play?", "hi ♥", "wag", "arf" };
+
         public Brain(int fw, int fh, int groundRow)
         {
             FW = fw; FH = fh; ground = groundRow;
             UpdateScreen();
             X = screen.Left + screen.Width * 0.4;
             FeetY = FloorY;
+            chatterTimer = 20 + rng.NextDouble() * 40;
         }
+
+        public void Say(string text, double seconds = 3.5) { BubbleText = text; bubbleTimer = seconds; }
 
         public void UpdateScreen()
         {
@@ -177,6 +187,20 @@ namespace Purrch
             int fc = AnimFrames(CurrentAnim);
             frameT += dt * 1000;
             while (frameT >= ms) { frameT -= ms; Frame = (Frame + 1) % Math.Max(1, fc); }
+
+            // speech bubble timing + occasional spontaneous chatter
+            if (BubbleText != null) { bubbleTimer -= dt; if (bubbleTimer <= 0) BubbleText = null; }
+            chatterTimer -= dt;
+            if (chatterTimer <= 0)
+            {
+                chatterTimer = 25 + rng.NextDouble() * 50;
+                if (BubbleText == null && State != PetState.Sleep && State != PetState.Drag
+                    && State != PetState.Fall && State != PetState.Eat)
+                {
+                    Say((Species == "dog" ? DogSays : CatSays)[rng.Next((Species == "dog" ? DogSays : CatSays).Length)]);
+                    OnChatter?.Invoke();
+                }
+            }
         }
 
         private void Decide()
