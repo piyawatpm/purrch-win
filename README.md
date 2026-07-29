@@ -58,11 +58,12 @@ dotnet publish Purrch/Purrch.csproj -c Release -r win-x64 --self-contained true 
 ## Parity with the macOS app
 
 This is a growing port. **Done:** wander/rest/sleep, drag-drop with gravity,
-click reactions, meow/bark, cat/dog, size, launch-at-login, and in-app update
-checks. **Not yet ported from macOS:** the to-do list + feeding, toys, speech
-bubbles, the right-click control panel, collar/eye colour customisation, the
-photo-likeness feature, follow-cursor/window modes, and jump. The update
-mechanism above is what lets these ship incrementally.
+click reactions, meow/bark, cat/dog, size, launch-at-login, in-app update checks,
+**the to-do list + feeding**, **speech bubbles + spontaneous chatter**, and
+**jump**. **Not yet ported from macOS:** toys (mouse/ball/feather + catch), the
+right-click control panel, collar/eye-colour customisation, the photo-likeness
+feature, and follow-cursor/window modes. The update mechanism above is what lets
+these ship incrementally.
 
 ## Assets
 
