@@ -40,8 +40,9 @@ namespace Purrch
 
             var intro = new Label
             {
-                Text = "Upload a photo and an image model redraws your pet as the companion. "
-                     + "It becomes the resting look; movement uses the rig in your pet's colours.",
+                Text = "Upload a photo and it's turned into a pixel version of your pet — free, "
+                     + "on your PC. Add a Gemini key (optional) for a sharper AI-drawn look. It "
+                     + "becomes the resting look; movement uses the rig in your pet's colours.",
                 Dock = DockStyle.Fill, ForeColor = Color.DimGray, Padding = new Padding(2, 4, 2, 0),
             };
 
@@ -57,7 +58,7 @@ namespace Purrch
             top.Controls.Add(speciesBox);
 
             keyBox = new TextBox { Dock = DockStyle.Fill, UseSystemPasswordChar = true };
-            keyBox.PlaceholderText = "Gemini API key — leave empty for a free test render";
+            keyBox.PlaceholderText = "Gemini API key — leave empty for the free on-device version";
             keyBox.Text = KeyStore.Load();
 
             preview = new PictureBox { Dock = DockStyle.Fill, BackColor = Color.FromArgb(245, 245, 247), BorderStyle = BorderStyle.FixedSingle };
@@ -123,15 +124,16 @@ namespace Purrch
             string sp = species;
             try
             {
+                bool crisp = key.Length != 0;
                 Bitmap raw = key.Length == 0
-                    ? GeminiProvider.MockRender(template)
+                    ? new Bitmap(photo)                     // free: pixel-ify the actual photo on-device
                     : await GeminiProvider.RenderAsync(key, photo, template, sp);
-                var res = await Task.Run(() => PortraitPipeline.Process(raw, sp, lib.FW, lib.FH, lib.Manifest.ground));
+                var res = await Task.Run(() => PortraitPipeline.Process(raw, sp, lib.FW, lib.FH, lib.Manifest.ground, crisp));
                 raw.Dispose();
                 result?.Idle?.Dispose();
                 result = res;
                 applyBtn.Enabled = true;
-                status.Text = key.Length == 0 ? "Test render (no key used)." : "Done — preview below.";
+                status.Text = key.Length == 0 ? "Made from your photo — free, on your PC." : "Done — preview below.";
                 preview.Invalidate();
             }
             catch (Exception ex) { status.Text = ex.Message; }

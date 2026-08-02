@@ -31,13 +31,12 @@ namespace Purrch
     /// feet on the floor, and sample a coat ramp so the rest of the rig can match.
     public static class PortraitPipeline
     {
-        public static PortraitResult Process(Bitmap raw, string species, int frameW, int frameH, int ground)
+        public static PortraitResult Process(Bitmap raw, string species, int frameW, int frameH, int ground, bool crisp = true)
         {
             using var subject = EnsureTransparent(raw);
             var box = AlphaBBox(subject) ?? new Rectangle(0, 0, subject.Width, subject.Height);
             using var cropped = subject.Clone(box, PixelFormat.Format32bppArgb);
 
-            int footInset = frameH - ground;
             double maxW = frameW - 2, maxH = Math.Max(1, ground - 2);
             double scale = Math.Min(maxW / cropped.Width, maxH / cropped.Height);
             int newW = Math.Max(1, (int)Math.Round(cropped.Width * scale));
@@ -46,14 +45,26 @@ namespace Purrch
             var idle = new Bitmap(frameW, frameH, PixelFormat.Format32bppArgb);
             using (var g = Graphics.FromImage(idle))
             {
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                // Crisp (AI pixel art) keeps hard pixels; the free photo path
+                // downscales smoothly then posterises so it reads as pixel art.
+                g.InterpolationMode = crisp
+                    ? System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor
+                    : System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                 g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
                 int x = (frameW - newW) / 2;
                 int y = ground - newH;                 // content bottom (feet) on the ground row
                 g.DrawImage(cropped, new Rectangle(x, y, newW, newH),
                             new Rectangle(0, 0, cropped.Width, cropped.Height), GraphicsUnit.Pixel);
             }
+            if (!crisp) Posterize(idle, 6);
             return new PortraitResult { Idle = idle, Palette = ExtractPalette(idle) ?? Fallback(species), Species = species };
+        }
+
+        private static void Posterize(Bitmap bmp, int levels)
+        {
+            double step = 255.0 / Math.Max(1, levels - 1);
+            byte Snap(byte v) => (byte)Math.Min(255, Math.Round(v / step) * step);
+            Edit(bmp, (r, g, b, a) => a <= 20 ? (r, g, b, a) : (Snap(r), Snap(g), Snap(b), a));
         }
 
         public static void TintOpaque(Bitmap bmp, Color c) =>
